@@ -1,0 +1,22 @@
+﻿
+@model List<string>
+
+<div class="container">
+    <h1 class="text-center my-4">Interactive Dictionary</h1>
+    
+    <div class="card">
+        <div class="card-header">
+            <h2>Select a Letter</h2>
+        </div>
+        <div class="card-body">
+            <div class="d-flex flex-wrap justify-content-center">
+                @foreach (var letter in Model)
+                {
+                    <a href="@Url.Action("Words", new { letter = letter })" 
+                       class="btn btn-primary m-1">@letter</a>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
