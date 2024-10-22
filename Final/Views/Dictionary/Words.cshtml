@@ -1,5 +1,6 @@
 ﻿<div class="row">
     <div class="col-md-4">
+        <!-- Word List section remains the same -->
         <div class="card">
             <div class="card-header">
                 <h3>Word List</h3>
@@ -8,7 +9,9 @@
                 @foreach (var word in Model.Words)
                 {
                     <div class="word-item d-flex justify-content-between align-items-center mb-2">
-                        <a href="#" class="btn btn-outline-primary word-link" data-id="@word.Id">
+                        <a href="#" class="btn btn-outline-primary word-link"
+                           data-id="@word.Id"
+                           data-word="@word.Text">
                             @word.Text
                         </a>
                         <button class="btn btn-sm btn-secondary speak-btn" data-word="@word.Text">
@@ -18,63 +21,119 @@
                 }
             </div>
         </div>
-
         <div class="mt-3">
-            <a href="@Url.Action("Flashcard", new { letter = Model.Letter })" class="btn btn-success">Flashcard Mode</a>
+            <button onclick="showFlashcardMode()" class="btn btn-success">Flashcard Mode</button>
             <a href="@Url.Action("Exam", new { letter = Model.Letter })" class="btn btn-warning">Start Exam</a>
             <a href="@Url.Action("MatchingExam", new { letter = Model.Letter })" class="btn btn-info">Matching Exam</a>
         </div>
     </div>
-
     <div class="col-md-8">
-        <div class="card">
-            <div class="card-header">
-                <h3>Word Definition</h3>
+        <!-- Study Mode Section -->
+        <div id="study-mode-section">
+            <div class="card">
+                <div class="card-header">
+                    <h3>Word Definition</h3>
+                </div>
+                <div class="card-body">
+                    <div id="word-definition">
+                        <p>Select a word to see its definition here.</p>
+                    </div>
+                </div>
             </div>
-            <div class="card-body">
-                <div id="word-definition">
-                    <p>Select a word to see its definition here.</p>
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h3>Story</h3>
+                </div>
+                <div class="card-body">
+                    @if (Model.Story != null)
+                    {
+                        <div class="story-content">
+                            @Html.Raw(Model.Story.Content)
+                        </div>
+                    }
+                    else
+                    {
+                        <p>No story available for this letter.</p>
+                    }
                 </div>
             </div>
         </div>
 
-        <div class="card mt-3">
-            <div class="card-header">
-                <h3>Story</h3>
-            </div>
-            <div class="card-body">
-                @if (Model.Story != null)
-                {
-                    <div class="story-content">
-                        @Html.Raw(Model.Story.Content)
+        <!-- Flashcard Section -->
+        <div id="flashcard-mode-section" class="d-none">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h3>Flashcard Mode</h3>
+                    <div>
+                        <span id="card-counter" class="badge bg-primary"></span>
                     </div>
-                }
-                else
-                {
-                    <p>No story available for this letter.</p>
-                }
+                </div>
+                <div class="card-body">
+                    <div id="flashcard" class="flashcard" onclick="flipCard()">
+                        <div id="flashcard-word" class="flashcard-content"></div>
+                        <div id="flashcard-definition" class="flashcard-content d-none"></div>
+                    </div>
+                    <div class="text-center mt-4">
+                        <button class="btn btn-primary" onclick="nextCard()">Next Card</button>
+                        <button class="btn btn-secondary" onclick="showStudyMode()">Back to Study</button>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 </div>
 
+<style>
+    .flashcard {
+        min-height: 200px;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        padding: 20px;
+        margin: 20px 0;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-color: #f8f9fa;
+        transition: transform 0.3s;
+    }
+
+        .flashcard:hover {
+            transform: scale(1.02);
+        }
+
+    .flashcard-content {
+        font-size: 24px;
+        text-align: center;
+        width: 100%;
+    }
+</style>
+
 @section Scripts {
     <script>
-        // Handle text-to-speech functionality
-        document.querySelectorAll('.speak-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const word = btn.dataset.word;
-                const utterance = new SpeechSynthesisUtterance(word);
-                window.speechSynthesis.speak(utterance);
-            });
-        });
+        let currentWordIndex = -1;
+        let words = [];
 
-        // Handle word definition loading via AJAX
+        // Initialize words array from the model
+        @foreach (var word in Model.Words)
+        {
+            @:words.push({ id: @word.Id, text: '@word.Text' });
+        }
+
+            // Text-to-speech functionality
+            document.querySelectorAll('.speak-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const word = btn.dataset.word;
+                    const utterance = new SpeechSynthesisUtterance(word);
+                    window.speechSynthesis.speak(utterance);
+                });
+            });
+
+        // Word definition loading via AJAX
         document.querySelectorAll('.word-link').forEach(link => {
             link.addEventListener('click', function (e) {
                 e.preventDefault();
                 const wordId = this.dataset.id;
-
                 fetch('/Dictionary/GetWordDefinition?id=' + wordId)
                     .then(response => response.text())
                     .then(data => {
@@ -83,5 +142,51 @@
                     .catch(error => console.error('Error fetching definition:', error));
             });
         });
+
+        // Flashcard functionality
+        function showFlashcardMode() {
+            document.getElementById('study-mode-section').classList.add('d-none');
+            document.getElementById('flashcard-mode-section').classList.remove('d-none');
+            currentWordIndex = 0;
+            updateFlashcard();
+        }
+
+        function showStudyMode() {
+            document.getElementById('flashcard-mode-section').classList.add('d-none');
+            document.getElementById('study-mode-section').classList.remove('d-none');
+        }
+
+        function updateFlashcard() {
+            if (currentWordIndex >= 0 && currentWordIndex < words.length) {
+                const currentWord = words[currentWordIndex];
+                document.getElementById('flashcard-word').textContent = currentWord.text;
+
+                // Fetch definition for the current word
+                fetch('/Dictionary/GetWordDefinition?id=' + currentWord.id)
+                    .then(response => response.text())
+                    .then(data => {
+                        document.getElementById('flashcard-definition').innerHTML = data;
+                        // Reset card to show word side
+                        document.getElementById('flashcard-word').classList.remove('d-none');
+                        document.getElementById('flashcard-definition').classList.add('d-none');
+                        // Update counter
+                        document.getElementById('card-counter').textContent =
+                            `${currentWordIndex + 1} / ${words.length}`;
+                    })
+                    .catch(error => console.error('Error fetching definition:', error));
+            }
+        }
+
+        function flipCard() {
+            const word = document.getElementById('flashcard-word');
+            const definition = document.getElementById('flashcard-definition');
+            word.classList.toggle('d-none');
+            definition.classList.toggle('d-none');
+        }
+
+        function nextCard() {
+            currentWordIndex = (currentWordIndex + 1) % words.length;
+            updateFlashcard();
+        }
     </script>
 }
