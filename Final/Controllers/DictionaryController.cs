@@ -53,15 +53,56 @@ public class DictionaryController : Controller
         return View(word);
     }
 
-    [HttpGet]
-    public async Task<IActionResult> Flashcard(string letter)
+    public IActionResult Flashcard(string letter, int? index)
     {
-        var words = await _context.Words
-            .Where(w => w.Letter == letter)
+        var words = _context.Words
+            .Where(w => w.Text.StartsWith(letter))
             .OrderBy(w => w.Text)
-            .ToListAsync();
+            .ToList();
 
-        return View(words);
+        if (!words.Any())
+        {
+            return RedirectToAction("Index");
+        }
+
+        int currentIndex = index ?? 0;
+        if (currentIndex >= words.Count) currentIndex = 0;
+        if (currentIndex < 0) currentIndex = words.Count - 1;
+
+        var currentWord = words[currentIndex];
+
+        var viewModel = new FlashcardViewModel
+        {
+            Id = currentWord.Id,
+            Word = currentWord.Text,
+            Definition = currentWord.Definition,
+            Letter = letter,
+            CurrentIndex = currentIndex,
+            TotalWords = words.Count
+        };
+
+        return View(viewModel);
+    }
+
+    [HttpGet]
+    public IActionResult GetNextCard(string letter, int currentIndex)
+    {
+        var words = _context.Words
+            .Where(w => w.Text.StartsWith(letter))
+            .OrderBy(w => w.Text)
+            .ToList();
+
+        int nextIndex = (currentIndex + 1) % words.Count;
+        var nextWord = words[nextIndex];
+
+        return Json(new
+        {
+            id = nextWord.Id,
+            word = nextWord.Text,
+            definition = nextWord.Definition,
+            currentIndex = nextIndex,
+            totalWords = words.Count
+        });
     }
 
     [HttpGet]

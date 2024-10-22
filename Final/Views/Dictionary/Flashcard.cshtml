@@ -1,0 +1,94 @@
+﻿
+@using Final.ViewModels
+@model FlashcardViewModel
+
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h3>Flashcards - Letter @Model.Letter</h3>
+                    <div>
+                        <span class="badge bg-primary">@(Model.CurrentIndex + 1) / @Model.TotalWords</span>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div id="flashcard" class="flashcard" onclick="flipCard()">
+                        <div id="flashcard-word" class="flashcard-content">
+                            @Model.Word
+                        </div>
+                        <div id="flashcard-definition" class="flashcard-content d-none">
+                            @Model.Definition
+                        </div>
+                    </div>
+                    <div class="text-center mt-4">
+                        <button class="btn btn-primary" onclick="nextCard()">Next Card</button>
+                        <a href="@Url.Action("Index", new { letter = Model.Letter })" class="btn btn-secondary">Back to Study</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Styles {
+    <style>
+        .flashcard {
+            min-height: 200px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background-color: #f8f9fa;
+            transition: transform 0.3s;
+        }
+
+            .flashcard:hover {
+                transform: scale(1.02);
+            }
+
+        .flashcard-content {
+            font-size: 24px;
+            text-align: center;
+            width: 100%;
+        }
+    </style>
+}
+
+@section Scripts {
+    <script>
+        let currentIndex = @Model.CurrentIndex;
+        let currentLetter = '@Model.Letter';
+
+        function flipCard() {
+            const word = document.getElementById('flashcard-word');
+            const definition = document.getElementById('flashcard-definition');
+
+            word.classList.toggle('d-none');
+            definition.classList.toggle('d-none');
+        }
+
+        function nextCard() {
+            fetch(`/Dictionary/GetNextCard?letter=${currentLetter}&currentIndex=${currentIndex}`)
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('flashcard-word').textContent = data.word;
+                    document.getElementById('flashcard-definition').textContent = data.definition;
+
+                    // Reset card to show word
+                    document.getElementById('flashcard-word').classList.remove('d-none');
+                    document.getElementById('flashcard-definition').classList.add('d-none');
+
+                    // Update counter
+                    currentIndex = data.currentIndex;
+                    document.querySelector('.badge').textContent =
+                        `${data.currentIndex + 1} / ${data.totalWords}`;
+                })
+                .catch(error => console.error('Error fetching next card:', error));
+        }
+    </script>
+}
